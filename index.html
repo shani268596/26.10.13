@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MemoryQ (메모리큐) - 시험 암기 5지선다 & OX 퀴즈 마스터</title>
+  <meta name="description" content="시험 대비 암기를 완벽하게 돕는 5지선다 및 OX 퀴즈 생성·학습 웹 애플리케이션. 오답노트, 스마트 텍스트 파서, 플래시카드 지원">
+  
+  <!-- Pretendard & Outfit Fonts -->
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#6366f1">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-dark">
+  <div id="app" class="app-container">
+    <!-- 상단 네비게이션 & 헤더 -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo-area" id="btn-logo-home" title="홈으로 이동">
+          <div class="logo-icon">🎯</div>
+          <div class="logo-text">
+            <h1 class="app-title">MemoryQ</h1>
+            <span class="app-badge">시험 암기 마스터</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 메인 네비게이션 탭 -->
+      <nav class="main-nav" aria-label="메인 메뉴">
+        <button type="button" class="nav-btn active" id="nav-quiz" data-view="quiz-view">
+          <span class="nav-icon">✍️</span> 퀴즈 풀기
+        </button>
+        <button type="button" class="nav-btn" id="nav-creator" data-view="creator-view">
+          <span class="nav-icon">✨</span> 퀴즈 만들기
+        </button>
+        <button type="button" class="nav-btn" id="nav-wrong" data-view="wrong-view">
+          <span class="nav-icon">❌</span> 오답노트 <span class="badge-count" id="wrong-count-badge">0</span>
+        </button>
+        <button type="button" class="nav-btn" id="nav-decks" data-view="decks-view">
+          <span class="nav-icon">📚</span> 문제집 보관함
+        </button>
+        <button type="button" class="nav-btn" id="nav-stats" data-view="stats-view">
+          <span class="nav-icon">📊</span> 학습 통계
+        </button>
+      </nav>
+
+      <!-- 우측 컨트롤 버튼들 -->
+      <div class="header-right">
+        <button type="button" class="icon-btn" id="btn-sound-toggle" title="효과음 켜기/끄기">
+          <span id="sound-icon">🔊</span>
+        </button>
+        <button type="button" class="icon-btn" id="btn-theme-toggle" title="다크/라이트 테마 전환">
+          <span id="theme-icon">🌙</span>
+        </button>
+        <button type="button" class="primary-sm-btn" id="btn-quick-new-deck">
+          <span>+</span> 문제집 생성
+        </button>
+      </div>
+    </header>
+
+    <!-- 현재 문제집 배너 및 서브 컨트롤 -->
+    <div class="deck-status-bar">
+      <div class="deck-info-box">
+        <span class="label">선택된 문제집:</span>
+        <button type="button" class="deck-selector-btn" id="btn-open-deck-modal">
+          <span id="current-deck-title">🇰🇷 한국사 핵심 기출 암기 노트</span>
+          <span class="caret">▼</span>
+        </button>
+        <span class="deck-meta-chip" id="current-deck-count">총 8문제 (5지선다 3 / OX 5)</span>
+      </div>
+      <div class="deck-actions-right">
+        <div class="mode-toggles">
+          <label class="toggle-switch" title="문제를 풀자마자 즉시 정답 및 해설을 확인합니다.">
+            <input type="checkbox" id="chk-instant-feedback" checked>
+            <span class="toggle-slider"></span>
+            <span class="toggle-text">즉시 정답 확인</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 메인 컨텐츠 영역 -->
+    <main class="content-container">
+
+      <!-- ================= 1. 퀴즈 풀기 뷰 ================= -->
+      <section id="quiz-view" class="view-section active">
+        <!-- 퀴즈 필터 및 제어 바 -->
+        <div class="quiz-controls-card">
+          <div class="filter-group">
+            <span class="filter-label">풀이 유형:</span>
+            <div class="segmented-control" id="quiz-type-filter">
+              <button type="button" class="seg-btn active" data-filter="all">전체 혼합</button>
+              <button type="button" class="seg-btn" data-filter="choice5">5지선다만 (5지)</button>
+              <button type="button" class="seg-btn" data-filter="ox">OX 퀴즈만 (OX)</button>
+              <button type="button" class="seg-btn" data-filter="starred">⭐ 북마크만</button>
+            </div>
+          </div>
+
+          <div class="study-mode-group">
+            <button type="button" class="mode-pill-btn active" id="btn-mode-standard" title="기본 문제 풀이">
+              📝 연습 모드
+            </button>
+            <button type="button" class="mode-pill-btn" id="btn-mode-flashcard" title="앞뒤 뒤집기 카드 암기">
+              🃏 플래시카드 암기
+            </button>
+            <button type="button" class="mode-pill-btn" id="btn-mode-exam" title="타이머 작동 및 실전 모의고사">
+              ⏱️ 실전 모의고사
+            </button>
+            <button type="button" class="mode-pill-btn" id="btn-mode-paper" title="전체 시험지 형태로 보기 및 인쇄">
+              📄 시험지 인쇄보기
+            </button>
+          </div>
+        </div>
+
+        <!-- 실전 시험 타이머 바 (시험 모드일 때 활성화) -->
+        <div id="exam-timer-bar" class="exam-timer-bar hidden">
+          <div class="timer-display">
+            <span class="timer-icon">⏳</span>
+            <span class="timer-label">남은 시간:</span>
+            <span class="timer-digits" id="timer-text">15:00</span>
+          </div>
+          <div class="exam-progress-info">
+            <span id="exam-answered-count">0</span> / <span id="exam-total-count">0</span> 답변 완료
+          </div>
+          <button type="button" class="submit-exam-btn" id="btn-finish-exam">최종 답안 제출</button>
+        </div>
+
+        <!-- 퀴즈 진행 바 & 인디케이터 -->
+        <div class="quiz-progress-wrapper">
+          <div class="progress-meta">
+            <span class="current-step" id="progress-indicator">문제 1 / 8</span>
+            <div class="streak-indicator" id="streak-indicator" title="연속 정답 스트릭">
+              🔥 <span id="streak-count">0</span> 연타 정답!
+            </div>
+            <div class="right-quick-actions">
+              <button type="button" class="action-icon-btn" id="btn-toggle-star" title="이 문제 북마크">
+                <span id="star-icon">☆</span>
+              </button>
+              <button type="button" class="action-icon-btn" id="btn-shuffle-questions" title="문제 무작위 섞기">
+                🔀
+              </button>
+            </div>
+          </div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="quiz-progress-bar" style="width: 12.5%;"></div>
+          </div>
+          <!-- OMR 빠른 문항 바로가기 네비게이션 -->
+          <div class="omr-nav-container">
+            <span class="omr-label">OMR 문항 바로가기:</span>
+            <div class="omr-chips-list" id="omr-chips-list"></div>
+          </div>
+        </div>
+
+        <!-- 표준 퀴즈 카드 인터페이스 -->
+        <div id="standard-quiz-container" class="quiz-card-wrapper">
+          <div class="quiz-card" id="current-question-card">
+            <!-- 문항 헤더 (유형 배지, 태그) -->
+            <div class="q-card-header">
+              <div class="q-badges">
+                <span class="q-type-badge" id="q-type-badge">5지선다</span>
+                <span class="q-category-badge" id="q-category-badge">한국사</span>
+                <div class="q-tags" id="q-tags-container"></div>
+              </div>
+              <span class="q-index-tag" id="q-index-pill">Q1</span>
+            </div>
+
+            <!-- 문항 본문 -->
+            <div class="q-question-text" id="q-question-text">
+              문제를 불러오는 중입니다...
+            </div>
+
+            <!-- 5지선다 보기 영역 (choice5 타입일 때) -->
+            <div id="choice5-container" class="choice5-options-grid">
+              <!-- JS로 동적 생성: 1~5번 보기 -->
+            </div>
+
+            <!-- OX 퀴즈 선택 영역 (ox 타입일 때) -->
+            <div id="ox-container" class="ox-options-container hidden">
+              <button type="button" class="ox-btn ox-btn-o" id="btn-ox-o" data-value="O">
+                <div class="ox-symbol">⭕</div>
+                <div class="ox-label">옳음 (O)</div>
+                <div class="ox-shortcut">단축키: O 또는 1</div>
+              </button>
+              <button type="button" class="ox-btn ox-btn-x" id="btn-ox-x" data-value="X">
+                <div class="ox-symbol">❌</div>
+                <div class="ox-label">틀림 (X)</div>
+                <div class="ox-shortcut">단축키: X 또는 2</div>
+              </button>
+            </div>
+
+            <!-- 정답 확인 및 해설 박스 (답변 후 표시) -->
+            <div id="explanation-box" class="explanation-box hidden">
+              <div class="result-header" id="result-status-header">
+                <span class="result-icon" id="result-icon">🎉</span>
+                <span class="result-title" id="result-title">정답입니다!</span>
+              </div>
+              <div class="correct-answer-row">
+                <span class="ans-label">정답:</span>
+                <span class="ans-value" id="correct-answer-text">-</span>
+              </div>
+              <div class="explanation-content" id="explanation-text">
+                상세 해설 내용이 여기에 표시됩니다.
+              </div>
+            </div>
+
+            <!-- 퀴즈 하단 네비게이션 버튼 -->
+            <div class="q-card-footer">
+              <button type="button" class="btn-secondary" id="btn-prev-q">
+                ◀ 이전 문제
+              </button>
+              <div class="center-hints">
+                <span class="shortcut-tip" id="shortcut-tip">💡 숫자키 1~5 또는 O/X 키로 빠른 입력 가능</span>
+              </div>
+              <button type="button" class="btn-primary" id="btn-next-q">
+                다음 문제 ▶
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 플래시카드 암기 모드 컨테이너 -->
+        <div id="flashcard-container" class="flashcard-wrapper hidden">
+          <div class="flashcard-scene">
+            <div class="flashcard-3d" id="flashcard-3d">
+              <!-- 앞면: 문제 -->
+              <div class="card-face card-front">
+                <div class="card-hint-top">
+                  <span class="fc-type-badge" id="fc-type-badge">5지선다</span>
+                  <span class="flip-instruction">👆 카드를 클릭하면 정답과 해설이 뒤집힙니다</span>
+                </div>
+                <div class="fc-content" id="fc-question-text">
+                  문제 내용
+                </div>
+                <div class="fc-options-preview" id="fc-options-preview">
+                  <!-- 5지선다일 경우 보기 목록 미리보기 -->
+                </div>
+                <div class="card-action-bar">
+                  <button type="button" class="flip-action-btn" id="btn-flip-card">정답 확인하기 (Space / Click)</button>
+                </div>
+              </div>
+              <!-- 뒷면: 정답 및 해설 -->
+              <div class="card-face card-back">
+                <div class="card-hint-top">
+                  <span class="fc-badge-answer">정답 & 해설</span>
+                  <span class="flip-instruction">👆 다시 클릭하여 문제 보기</span>
+                </div>
+                <div class="fc-answer-highlight" id="fc-answer-highlight">
+                  정답: ⭕ 옳음
+                </div>
+                <div class="fc-explanation-scroll" id="fc-explanation-text">
+                  해설 내용
+                </div>
+                <div class="card-memorize-rating">
+                  <span class="rating-label">암기 상태 평가:</span>
+                  <div class="rating-buttons">
+                    <button type="button" class="rate-btn rate-hard" id="btn-rate-hard" title="아직 헷갈림 (오답노트 등록)">
+                      🤔 헷갈려요 (다시 보기)
+                    </button>
+                    <button type="button" class="rate-btn rate-easy" id="btn-rate-easy" title="완벽 암기">
+                      ✨ 완벽히 외웠어요!
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="fc-navigation-controls">
+            <button type="button" class="btn-secondary" id="btn-fc-prev">◀ 이전 카드</button>
+            <span class="fc-counter" id="fc-counter">1 / 8</span>
+            <button type="button" class="btn-primary" id="btn-fc-next">다음 카드 ▶</button>
+          </div>
+        </div>
+
+        <!-- 퀴즈 완료 / 결과 화면 -->
+        <div id="quiz-summary-modal" class="summary-wrapper hidden">
+          <div class="summary-card">
+            <div class="summary-header">
+              <div class="confetti-burst-icon">🏆</div>
+              <h2 class="summary-title" id="summary-title">퀴즈 완료! 멋지게 해내셨습니다!</h2>
+              <p class="summary-subtitle" id="summary-subtitle">오늘의 암기 학습 결과입니다.</p>
+            </div>
+
+            <div class="summary-score-hero">
+              <div class="score-radial">
+                <span class="score-num" id="summary-score-percent">100</span>
+                <span class="score-unit">%</span>
+              </div>
+              <div class="score-details-row">
+                <div class="stat-pill">
+                  <span class="stat-k">총 문제</span>
+                  <span class="stat-v" id="summary-total-q">8</span>
+                </div>
+                <div class="stat-pill correct">
+                  <span class="stat-k">정답</span>
+                  <span class="stat-v" id="summary-correct-q">8</span>
+                </div>
+                <div class="stat-pill wrong">
+                  <span class="stat-k">오답</span>
+                  <span class="stat-v" id="summary-wrong-q">0</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 틀린 문제 목록 및 복습 -->
+            <div id="summary-wrong-section" class="summary-wrong-list-box">
+              <h3 class="wrong-section-title">⚠️ 복습이 필요한 오답 목록 (<span id="summary-wrong-count">0</span>개)</h3>
+              <div class="wrong-items-container" id="summary-wrong-items">
+                <!-- 동적 오답 리스트 -->
+              </div>
+            </div>
+
+            <div class="summary-actions">
+              <button type="button" class="btn-highlight" id="btn-review-wrongs-only">
+                ❌ 오답만 다시 풀기
+              </button>
+              <button type="button" class="btn-secondary" id="btn-restart-quiz">
+                🔄 전체 다시 풀기
+              </button>
+              <button type="button" class="btn-primary" id="btn-go-to-decks">
+                📚 다른 문제집 풀기
+              </button>
+            </div>
+        <!-- 시험지 인쇄 / 전체 보기 모드 컨테이너 -->
+        <div id="paper-view-container" class="paper-view-container hidden">
+          <div class="paper-actions-bar">
+            <div class="paper-title-box">
+              <h2 id="paper-deck-title">📄 시험지 전체 보기</h2>
+              <span id="paper-deck-subtitle" class="paper-deck-subtitle"></span>
+            </div>
+            <div class="paper-buttons">
+              <button type="button" class="btn-secondary" id="btn-toggle-paper-answers">🔑 정답/해설 보이기</button>
+              <button type="button" class="btn-primary" id="btn-print-paper">🖨️ 인쇄 / PDF 저장</button>
+              <button type="button" class="btn-secondary" id="btn-close-paper-mode">✕ 퀴즈 풀기로 복귀</button>
+            </div>
+          </div>
+          <div class="paper-sheet" id="paper-sheet-content">
+            <!-- 2단 문제 그리드 동적 렌더링 -->
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================= 2. 퀴즈 생성기 뷰 ================= -->
+      <section id="creator-view" class="view-section hidden">
+        <div class="creator-container">
+          <div class="creator-header">
+            <h2>✨ 퀴즈 생성기 (Quiz Generator)</h2>
+            <p>공부 요약본을 붙여넣어 5지선다/OX 문제를 자동 변환하거나, 직접 문제를 등록하세요.</p>
+          </div>
+
+          <!-- 생성기 탭 -->
+          <div class="tab-pills" id="creator-tab-pills">
+            <button type="button" class="tab-pill-btn active" data-tab="tab-smart-parser">
+              🤖 스마트 텍스트 자동 파서
+            </button>
+            <button type="button" class="tab-pill-btn" data-tab="tab-manual-builder">
+              ✍️ 직접 문제 추가
+            </button>
+            <button type="button" class="tab-pill-btn" data-tab="tab-ai-prompt">
+              💡 AI 프롬프트 템플릿
+            </button>
+          </div>
+
+          <!-- 탭 1: 스마트 텍스트 자동 파서 -->
+          <div id="tab-smart-parser" class="creator-tab-panel active">
+            <div class="panel-guide-box">
+              <h4>📋 교재 요약본이나 시험 노트를 아래 양식에 맞게 붙여넣으세요!</h4>
+              <p>스마트 파서가 5지선다 및 OX 퀴즈를 자동으로 인식하고 분리하여 문제집으로 만들어 드립니다.</p>
+              <div class="sample-actions">
+                <button type="button" class="chip-btn" id="btn-insert-sample-text">📝 예시 양식 불러오기</button>
+                <button type="button" class="chip-btn" id="btn-clear-parser-text">🗑️ 지우기</button>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label for="parser-deck-title" class="form-label">문제집 제목</label>
+              <input type="text" id="parser-deck-title" class="text-input" placeholder="예: [기말고사] 정보처리기사 핵심 요약 암기 팩" value="나만의 시험 암기 노트">
+            </div>
+
+            <div class="form-row">
+              <label for="parser-input-text" class="form-label">텍스트 입력 (OX 및 5지선다 혼합 지원)</label>
+              <textarea id="parser-input-text" class="code-textarea" rows="12" placeholder="[예시 양식]
+[OX]
+1. 세종대왕은 1443년에 훈민정음을 창제했다. (O)
+해설: 1443년 창제, 1446년 반포하였습니다.
+
+2. 신라의 삼국통일은 660년에 완성되었다. (X)
+해설: 660년은 백제 멸망이며, 통일 완성은 676년 기벌포 해전입니다.
+
+[5지선다]
+1. 다음 중 조선 시대 4대 사화가 아닌 것은?
+① 무오사화
+② 갑자사화
+③ 기묘사화
+④ 을사사화
+⑤ 정묘사화
+정답: 5
+해설: 4대 사화는 무오, 갑자, 기묘, 을사사화입니다. 정묘호란과 혼동 주의!"></textarea>
+            </div>
+
+            <div class="parser-footer-action">
+              <button type="button" class="btn-primary-large" id="btn-run-smart-parser">
+                ⚡ 퀴즈로 변환하여 문제집 저장하기
+              </button>
+            </div>
+
+            <div id="parser-result-preview" class="parser-result-box hidden">
+              <!-- 변환된 문제 개수 및 미리보기 결과 -->
+            </div>
+          </div>
+
+          <!-- 탭 2: 직접 문제 추가 (Manual Builder) -->
+          <div id="tab-manual-builder" class="creator-tab-panel hidden">
+            <div class="manual-form-card">
+              <div class="form-grid-2">
+                <div class="form-row">
+                  <label for="builder-target-deck" class="form-label">추가할 문제집</label>
+                  <select id="builder-target-deck" class="select-input">
+                    <!-- 동적 채움 -->
+                  </select>
+                </div>
+                <div class="form-row">
+                  <label class="form-label">문제 유형 선택</label>
+                  <div class="segmented-control" id="builder-type-selector">
+                    <button type="button" class="seg-btn active" data-type="ox">OX 퀴즈</button>
+                    <button type="button" class="seg-btn" data-type="choice5">5지선다 퀴즈</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <label for="builder-q-text" class="form-label">문제 지문 *</label>
+                <textarea id="builder-q-text" class="text-input" rows="3" placeholder="암기할 핵심 질문이나 지문을 입력하세요..."></textarea>
+              </div>
+
+              <!-- 5지선다 전용 입력 필드 (type이 choice5일 때 표시) -->
+              <div id="builder-choice5-section" class="choice5-builder-box hidden">
+                <label class="form-label">5개 선택지 입력 및 정답 라디오 선택 *</label>
+                <div class="choice-input-rows">
+                  <div class="choice-input-row">
+                    <input type="radio" name="builder-correct-radio" value="0" id="b-rad-1" checked>
+                    <label for="b-rad-1" class="choice-num-label">①</label>
+                    <input type="text" class="text-input choice-opt-text" placeholder="1번 보기 내용" id="b-opt-0">
+                  </div>
+                  <div class="choice-input-row">
+                    <input type="radio" name="builder-correct-radio" value="1" id="b-rad-2">
+                    <label for="b-rad-2" class="choice-num-label">②</label>
+                    <input type="text" class="text-input choice-opt-text" placeholder="2번 보기 내용" id="b-opt-1">
+                  </div>
+                  <div class="choice-input-row">
+                    <input type="radio" name="builder-correct-radio" value="2" id="b-rad-3">
+                    <label for="b-rad-3" class="choice-num-label">③</label>
+                    <input type="text" class="text-input choice-opt-text" placeholder="3번 보기 내용" id="b-opt-2">
+                  </div>
+                  <div class="choice-input-row">
+                    <input type="radio" name="builder-correct-radio" value="3" id="b-rad-4">
+                    <label for="b-rad-4" class="choice-num-label">④</label>
+                    <input type="text" class="text-input choice-opt-text" placeholder="4번 보기 내용" id="b-opt-3">
+                  </div>
+                  <div class="choice-input-row">
+                    <input type="radio" name="builder-correct-radio" value="4" id="b-rad-5">
+                    <label for="b-rad-5" class="choice-num-label">⑤</label>
+                    <input type="text" class="text-input choice-opt-text" placeholder="5번 보기 내용" id="b-opt-4">
+                  </div>
+                </div>
+              </div>
+
+              <!-- OX 전용 정답 선택 (type이 ox일 때 표시) -->
+              <div id="builder-ox-section" class="ox-builder-box">
+                <label class="form-label">정답 선택 *</label>
+                <div class="segmented-control" id="builder-ox-val-selector">
+                  <button type="button" class="seg-btn active" data-val="O">⭕ 옳음 (O)</button>
+                  <button type="button" class="seg-btn" data-val="X">❌ 틀림 (X)</button>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <label for="builder-explanation" class="form-label">상세 해설 & 암기 팁 (선택)</label>
+                <textarea id="builder-explanation" class="text-input" rows="3" placeholder="오답인 이유, 함정 키워드, 암기 공식 등을 적어두면 학습 효과가 배가됩니다."></textarea>
+              </div>
+
+              <div class="form-row">
+                <label for="builder-tags" class="form-label">태그 / 키워드 (쉼표 구분)</label>
+                <input type="text" id="builder-tags" class="text-input" placeholder="예: 삼국시대, 중요빈출, 행정법">
+              </div>
+
+              <div class="form-actions">
+                <button type="button" class="btn-primary" id="btn-save-manual-question">
+                  ➕ 문제 추가하기
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 탭 3: AI 프롬프트 템플릿 -->
+          <div id="tab-ai-prompt" class="creator-tab-panel hidden">
+            <div class="panel-guide-box">
+              <h4>🧠 ChatGPT / Claude / Gemini를 활용한 고품질 퀴즈 대량 생성</h4>
+              <p>교재나 강의록이 너무 많을 때, 아래 최적화된 프롬프트를 복사하여 AI에게 질문해보세요. AI가 생성해준 텍스트를 복사해 [스마트 텍스트 자동 파서]에 붙여넣기만 하면 끝납니다!</p>
+            </div>
+
+            <div class="ai-prompt-box">
+              <div class="prompt-header">
+                <span class="prompt-badge">추천 프롬프트 템플릿</span>
+                <button type="button" class="copy-btn" id="btn-copy-ai-prompt">📋 프롬프트 복사</button>
+              </div>
+              <pre class="prompt-pre" id="ai-prompt-content">너는 시험 암기 퀴즈 출제 전문가야. 아래 제공하는 [학습 내용]을 읽고, 학생이 확실하게 암기할 수 있도록 5지선다 문제와 OX 문제를 각각 균형 있게 출제해줘.
+
+[출제 규칙]
+1. OX 문제는 지문 끝에 (O) 또는 (X)로 정답을 표기하고, 바로 다음 줄에 '해설: '을 작성할 것.
+2. 5지선다 문제는 ①~⑤ 보기를 작성하고, '정답: 1~5', '해설: '을 작성할 것.
+3. 지엽적인 함정 및 시험에 자주 헷갈리는 포인트를 해설에 명확히 짚어줄 것.
+
+[출력 형식 예시]
+[OX]
+1. 지문 내용 (O)
+해설: 해설 설명...
+
+[5지선다]
+1. 문제 지문
+① 보기1
+② 보기2
+③ 보기3
+④ 보기4
+⑤ 보기5
+정답: 3
+해설: 상세 해설...
+
+[학습 내용]:
+(여기에 교재 요약본이나 시험 범위를 붙여넣으세요)</pre>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ================= 3. 오답노트 뷰 ================= -->
+      <section id="wrong-view" class="view-section hidden">
+        <div class="wrong-container">
+          <div class="wrong-header-row">
+            <div>
+              <h2>❌ 시험 대비 취약점 오답노트</h2>
+              <p>틀린 문제들은 완벽하게 암기할 때까지 자동으로 보관됩니다.</p>
+            </div>
+            <div class="wrong-actions-bar">
+              <button type="button" class="btn-highlight" id="btn-practice-wrongs">
+                🎯 오답노트만 집중 풀기
+              </button>
+              <button type="button" class="btn-secondary" id="btn-clear-wrongs">
+                🗑️ 오답 기록 초기화
+              </button>
+            </div>
+          </div>
+
+          <div class="wrong-filter-bar">
+            <span class="filter-label">유형 필터:</span>
+            <div class="segmented-control" id="wrong-type-filter">
+              <button type="button" class="seg-btn active" data-filter="all">전체 (<span id="wrong-total-filter-count">0</span>)</button>
+              <button type="button" class="seg-btn" data-filter="choice5">5지선다만</button>
+              <button type="button" class="seg-btn" data-filter="ox">OX만</button>
+            </div>
+          </div>
+
+          <div class="wrong-cards-list" id="wrong-cards-list">
+            <!-- 오답 항목 동적 렌더링 -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 4. 문제집 보관함 뷰 ================= -->
+      <section id="decks-view" class="view-section hidden">
+        <div class="decks-container">
+          <div class="decks-header-row">
+            <div>
+              <h2>📚 문제집 보관함 (Deck Library)</h2>
+              <p>과목별, 시험별로 문제집을 생성하고 관리하세요.</p>
+            </div>
+            <div class="deck-btn-group">
+              <button type="button" class="btn-secondary" id="btn-export-decks">
+                📤 JSON 내보내기
+              </button>
+              <button type="button" class="btn-secondary" id="btn-import-decks-trigger">
+                📥 JSON 가져오기
+              </button>
+              <input type="file" id="file-import-decks" accept=".json" class="hidden">
+              <button type="button" class="btn-primary" id="btn-create-deck-modal">
+                ➕ 새 문제집 만들기
+              </button>
+            </div>
+          </div>
+
+          <!-- 문제집 카드 그리드 -->
+          <div class="decks-grid" id="decks-grid">
+            <!-- 동적 문제집 카드들 -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 5. 학습 통계 뷰 ================= -->
+      <section id="stats-view" class="view-section hidden">
+        <div class="stats-container">
+          <div class="stats-header">
+            <h2>📊 나의 시험 암기 분석 대시보드</h2>
+            <p>나의 학습량과 정답률 추이를 확인하고 취약 유형을 보완하세요.</p>
+          </div>
+
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-icon">📝</div>
+              <div class="kpi-info">
+                <span class="kpi-title">총 푼 문제 수</span>
+                <span class="kpi-value" id="kpi-total-solved">0회</span>
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-icon">🎯</div>
+              <div class="kpi-info">
+                <span class="kpi-title">누적 정답률</span>
+                <span class="kpi-value highlight" id="kpi-accuracy">0%</span>
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-icon">🔥</div>
+              <div class="kpi-info">
+                <span class="kpi-title">최고 연속 정답</span>
+                <span class="kpi-value" id="kpi-max-streak">0연속</span>
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-icon">❌</div>
+              <div class="kpi-info">
+                <span class="kpi-title">현재 오답 수</span>
+                <span class="kpi-value warning" id="kpi-wrong-count">0개</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 유형별 분석 차트 카드 -->
+          <div class="stats-breakdown-card">
+            <h3>📈 문제 유형별 성취도</h3>
+            <div class="breakdown-rows">
+              <div class="breakdown-row">
+                <div class="row-header">
+                  <span class="type-name">5지선다 퀴즈 (Choice 5)</span>
+                  <span class="row-stat" id="stat-choice5-text">0 / 0 (0%)</span>
+                </div>
+                <div class="stat-progress-track">
+                  <div class="stat-progress-fill choice5-fill" id="stat-choice5-bar" style="width: 0%;"></div>
+                </div>
+              </div>
+              <div class="breakdown-row">
+                <div class="row-header">
+                  <span class="type-name">OX 퀴즈 (True/False)</span>
+                  <span class="row-stat" id="stat-ox-text">0 / 0 (0%)</span>
+                </div>
+                <div class="stat-progress-track">
+                  <div class="stat-progress-fill ox-fill" id="stat-ox-bar" style="width: 0%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="study-tips-card">
+            <h3>💡 효과적인 암기 팁</h3>
+            <ul class="tips-list">
+              <li><strong>스피드 OX 반복:</strong> 헷갈리는 핵심 지문은 OX 모드로 반복하여 즉각적인 진위 판별력을 기르세요.</li>
+              <li><strong>오답노트 100% 클리어:</strong> 시험 직전에는 [오답노트만 집중 풀기]로 오답 개수를 0개로 만드세요.</li>
+              <li><strong>5지선다 오답 보기 분석:</strong> 정답뿐만 아니라 4개의 오답 보기가 왜 틀렸는지 해설을 꼭 읽어두세요.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- 모달: 새 문제집 생성 다이얼로그 -->
+    <div id="modal-new-deck" class="modal-backdrop hidden">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>➕ 새 문제집 생성</h3>
+          <button type="button" class="modal-close-btn" id="btn-close-deck-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <label for="new-deck-title-input" class="form-label">문제집 이름 *</label>
+            <input type="text" id="new-deck-title-input" class="text-input" placeholder="예: 공무원 헌법 총론 암기">
+          </div>
+          <div class="form-row">
+            <label for="new-deck-category-input" class="form-label">카테고리 / 과목</label>
+            <input type="text" id="new-deck-category-input" class="text-input" placeholder="예: 헌법, 한국사, IT">
+          </div>
+          <div class="form-row">
+            <label for="new-deck-desc-input" class="form-label">설명</label>
+            <textarea id="new-deck-desc-input" class="text-input" rows="2" placeholder="문제집에 대한 간단한 설명을 입력하세요"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="btn-cancel-new-deck">취소</button>
+          <button type="button" class="btn-primary" id="btn-confirm-new-deck">만들기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 모달: 문제집 선택 팝업 -->
+    <div id="modal-select-deck" class="modal-backdrop hidden">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>📚 학습할 문제집 선택</h3>
+          <button type="button" class="modal-close-btn" id="btn-close-select-deck-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="select-deck-list" id="select-deck-modal-list">
+            <!-- 문제집 선택 목록 -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 파티클 효과용 Canvas (정답 시 폭죽 애니메이션) -->
+    <canvas id="confetti-canvas"></canvas>
+
+    <!-- 알림 토스트 (Toast Alert) -->
+    <div id="toast-container" class="toast-container"></div>
+  </div>
+
+  <!-- 스크립트 연결 -->
+  <script src="presets.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
